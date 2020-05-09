@@ -9,19 +9,19 @@ using namespace cv;
 using std::cout; using std::cerr; using std::endl;
 
 void print_cap_prop(VideoCapture capture)
-{
-    /* Print a report of current resolution and FPS for VideoCapture. */
+{ /* Print a report of current resolution and FPS for VideoCapture. */
     cout << "Frame width: " << capture.get(CAP_PROP_FRAME_WIDTH) << endl;
     cout << "     height: " << capture.get(CAP_PROP_FRAME_HEIGHT) << endl;
     cout << "Capturing FPS: " << capture.get(CAP_PROP_FPS) << endl;
 }
 
+/// Resolution management
 struct resolution {
     unsigned int width;
     unsigned int height;
 };
 
-static size_t res_index = 3;
+static size_t res_index = 0;
 const static std::vector<resolution> resolutions =
     {{1920, 1080},
      {1280, 720},
@@ -30,8 +30,7 @@ const static std::vector<resolution> resolutions =
      {426, 240}};
 
 size_t toggle_resolution(VideoCapture capture)
-{
-    /* Toggle a resolution change among available resolutions */
+{ /* Toggle a resolution change among available resolutions */
     size_t res_length = resolutions.size();
     res_index = (res_index + 1) % res_length;
     
@@ -43,6 +42,33 @@ size_t toggle_resolution(VideoCapture capture)
     return res_index;
 }
 
+/// Capture codec management
+static size_t codec_index = 0;
+const static std::vector<int> codecs =
+    {VideoWriter::fourcc('M','J','P','G'),
+     VideoWriter::fourcc('Y','U','Y','V')};
+
+size_t toggle_codec(VideoCapture capture)
+{ /* Toggle the capture codec among available capture codecs */
+    size_t codec_length = codecs.size();
+    codec_index = (codec_index + 1) % codec_length;
+
+    capture.set(CAP_PROP_FOURCC, codecs[codec_index]);
+    capture.set(CAP_PROP_FPS, 1000); // Set maximum FPS for current resolution.
+    
+    print_cap_prop(capture);
+    return codec_index;
+}
+
+/// Capture initialization
+void capture_init(VideoCapture capture)
+{ /* Initialize the capture */
+    capture.set(CAP_PROP_FRAME_WIDTH, resolutions[res_index].width);
+    capture.set(CAP_PROP_FRAME_HEIGHT, resolutions[res_index].height);
+    capture.set(CAP_PROP_FOURCC, codecs[codec_index]);
+    capture.set(CAP_PROP_FPS, 1000); // Set maximum FPS for current resolution.
+}
+
 int main(int, char**)
 {
     Mat frame;
@@ -52,7 +78,7 @@ int main(int, char**)
         cerr << "ERROR: Can't initialize camera capture" << endl;
         return 1;
     }
-
+    capture_init(capture);
     print_cap_prop(capture);
     cout << endl << "Press 'ESC' to quit, 'space' to toggle frame processing"
          << endl;
@@ -108,6 +134,8 @@ int main(int, char**)
                      << enableProcessing << endl; break;
             case 114/*r*/: //Toggle resolution change.
                 toggle_resolution(capture); break;
+            case 99/*c*/: //Toggle codec change.
+                toggle_codec(capture); break;
             default: break;
         }
     }
