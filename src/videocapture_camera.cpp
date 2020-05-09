@@ -11,9 +11,8 @@ int main(int, char**)
 {
     Mat frame;
     cout << "Opening camera..." << endl;
-    VideoCapture capture(0); // open the first camera
-    if (!capture.isOpened())
-    {
+    VideoCapture capture(0); // open the first camera, /dev/video0
+    if (!capture.isOpened()) {
         cerr << "ERROR: Can't initialize camera capture" << endl;
         return 1;
     }
@@ -21,26 +20,23 @@ int main(int, char**)
     cout << "Frame width: " << capture.get(CAP_PROP_FRAME_WIDTH) << endl;
     cout << "     height: " << capture.get(CAP_PROP_FRAME_HEIGHT) << endl;
     cout << "Capturing FPS: " << capture.get(CAP_PROP_FPS) << endl;
-
     cout << endl << "Press 'ESC' to quit, 'space' to toggle frame processing" << endl;
     cout << endl << "Start grabbing..." << endl;
 
     size_t nFrames = 0;
     bool enableProcessing = false;
+    const int N = 10; // Print a report every N frames.
     int64 t0 = cv::getTickCount();
     int64 processingTime = 0;
-    for (;;)
-    {
+    for (;;) {
         capture >> frame; // read the next frame from camera
-        if (frame.empty())
-        {
+        if (frame.empty()) {
             cerr << "ERROR: Can't grab camera frame." << endl;
             break;
         }
         nFrames++;
-        if (nFrames % 10 == 0)
-        {
-            const int N = 10;
+        if (nFrames % N == 0) {
+            // Print a report.
             int64 t1 = cv::getTickCount();
             cout << "Frames captured: " << cv::format("%5lld", (long long int)nFrames)
                  << "    Average FPS: " << cv::format("%9.1f", (double)getTickFrequency() * N / (t1 - t0))
@@ -50,23 +46,23 @@ int main(int, char**)
             t0 = t1;
             processingTime = 0;
         }
-        if (!enableProcessing)
-        {
+        if (!enableProcessing) {
+            // Display a capture frame without processing.
             imshow("Frame", frame);
         }
-        else
-        {
+        else {
+            // Process the captured frame and then display.
             int64 tp0 = cv::getTickCount();
             Mat processed;
             cv::Canny(frame, processed, 400, 1000, 5);
             processingTime += cv::getTickCount() - tp0;
             imshow("Frame", processed);
         }
+        // User interaction.
         int key = waitKey(1);
-        if (key == 27/*ESC*/)
+        if (key == 27/*ESC*/) // Quit
             break;
-        if (key == 32/*SPACE*/)
-        {
+        if (key == 32/*SPACE*/) { // Toggle frame processing.
             enableProcessing = !enableProcessing;
             cout << "Enable frame processing ('space' key): " << enableProcessing << endl;
         }
