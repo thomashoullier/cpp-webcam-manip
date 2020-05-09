@@ -4,6 +4,7 @@
 #include <opencv2/imgproc.hpp>  // cv::Canny()
 #include <iostream>
 #include <vector>
+#include <string>
 
 using namespace cv;
 using std::cout; using std::cerr; using std::endl;
@@ -60,6 +61,18 @@ size_t toggle_codec(VideoCapture capture)
     return codec_index;
 }
 
+std::string decode_fourcc (const int fourcc_code)
+{ /* Decode a fourcc_code as provided by opencv as a 4-bytes concatenation of
+     chars. */
+     char fourcc_chars[] = {
+          (char)(fourcc_code & 0xff),
+          (char)((fourcc_code >> 8) & 0xff),
+          (char)((fourcc_code >> 16) & 0xff),
+          (char)((fourcc_code >> 24) & 0xff)};
+    std::string fourcc_str(fourcc_chars, 4);
+    return fourcc_str;
+}
+
 /// Capture initialization
 void capture_init(VideoCapture capture)
 { /* Initialize the capture */
@@ -69,38 +82,39 @@ void capture_init(VideoCapture capture)
     capture.set(CAP_PROP_FPS, 1000); // Set maximum FPS for current resolution.
 }
 
-/// Performance report
+/// Current report
 static int64 t0; // Starting time for next report.
 const static int N = 20; // Print a report every N frames.
 static size_t nFrames = 0; // Total number of frames acquired.
 static int64 processingTime = 0; // Time it took to process frames.
-static bool enable_perf_report = true;
 
-void print_perf_report()
-{ /* Print a real time performance report */
+void print_report(const String& winname, const VideoCapture capture)
+{ /* Print a real time performance report in overlay. */
     if (nFrames % N == 0) {
             int64 t1 = getTickCount();
-            cout << "Frames captured: " 
-                 << cv::format("%5lld", (long long int)nFrames)
-                 << "    Average FPS: " << cv::format("%9.1f",
+            std::ostringstream perf_string;
+            perf_string
+                 << "FOURCC: "<<decode_fourcc(capture.get(CAP_PROP_FOURCC))<<" "
+                 << "Target FPS: " << capture.get(CAP_PROP_FPS) << " "
+                 << capture.get(CAP_PROP_FRAME_WIDTH) << " x "
+                 << capture.get(CAP_PROP_FRAME_HEIGHT) << " "
+                 << "FPS: " << cv::format("%.1f ",
                     (double)getTickFrequency() * N / (t1 - t0))
-                 << "    Average time per frame: " << cv::format("%9.2f ms",
+                 << "Per frame: " << cv::format("%.1f ms ",
                     (double)(t1 - t0) * 1000.0f / (N * getTickFrequency()))
-                 << "    Average processing time: " << cv::format("%9.2f ms",
-                    (double)(processingTime)*1000.0f / (N * getTickFrequency()))
-                 << endl;
+                 << "Processing: " << cv::format("%.1f ms ",
+                   (double)(processingTime)*1000.0f / (N * getTickFrequency()));
             t0 = t1;
             processingTime = 0;
-    }
-}
 
-void toggle_perf_report()
-{ /* Toggle the performance report */
-    enable_perf_report = !enable_perf_report;
+            displayOverlay(winname, perf_string.str());
+    }
 }
 
 int main(int, char**)
 {
+    // Create a QT window
+    namedWindow("Frame", WINDOW_GUI_NORMAL | WINDOW_NORMAL);
     Mat frame;
     cout << "Opening camera..." << endl;
     VideoCapture capture(0); // open the first camera, /dev/video0
@@ -123,7 +137,7 @@ int main(int, char**)
             break;
         }
         nFrames++;
-        if (enable_perf_report) {print_perf_report();}
+        print_report("Frame", capture);
         if (!enableProcessing) {
             // Display a capture frame without processing.
             imshow("Frame", frame);
@@ -149,8 +163,6 @@ int main(int, char**)
                 toggle_resolution(capture); break;
             case 99/*c*/: //Toggle codec change.
                 toggle_codec(capture); break;
-            case 112/*p*/: //Toggle performance report.
-                toggle_perf_report(); break;
             default: break;
         }
     }
