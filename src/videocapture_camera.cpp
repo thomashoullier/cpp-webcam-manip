@@ -71,9 +71,10 @@ void capture_init(VideoCapture capture)
 
 /// Performance report
 static int64 t0; // Starting time for next report.
-const static int N = 50; // Print a report every N frames.
+const static int N = 20; // Print a report every N frames.
 static size_t nFrames = 0; // Total number of frames acquired.
 static int64 processingTime = 0; // Time it took to process frames.
+static bool enable_perf_report = true;
 
 void print_perf_report()
 { /* Print a real time performance report */
@@ -93,6 +94,11 @@ void print_perf_report()
     }
 }
 
+void toggle_perf_report()
+{ /* Toggle the performance report */
+    enable_perf_report = !enable_perf_report;
+}
+
 int main(int, char**)
 {
     Mat frame;
@@ -109,7 +115,7 @@ int main(int, char**)
     cout << endl << "Start grabbing..." << endl;
 
     bool enableProcessing = false;
-    t0 = cv::getTickCount();
+    t0 = getTickCount();
     for (;;) {
         capture >> frame; // read the next frame from camera
         if (frame.empty()) {
@@ -117,7 +123,7 @@ int main(int, char**)
             break;
         }
         nFrames++;
-        print_perf_report();
+        if (enable_perf_report) {print_perf_report();}
         if (!enableProcessing) {
             // Display a capture frame without processing.
             imshow("Frame", frame);
@@ -143,6 +149,8 @@ int main(int, char**)
                 toggle_resolution(capture); break;
             case 99/*c*/: //Toggle codec change.
                 toggle_codec(capture); break;
+            case 112/*p*/: //Toggle performance report.
+                toggle_perf_report(); break;
             default: break;
         }
     }
