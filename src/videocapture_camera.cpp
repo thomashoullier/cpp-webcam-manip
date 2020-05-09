@@ -69,6 +69,30 @@ void capture_init(VideoCapture capture)
     capture.set(CAP_PROP_FPS, 1000); // Set maximum FPS for current resolution.
 }
 
+/// Performance report
+static int64 t0; // Starting time for next report.
+const static int N = 50; // Print a report every N frames.
+static size_t nFrames = 0; // Total number of frames acquired.
+static int64 processingTime = 0; // Time it took to process frames.
+
+void print_perf_report()
+{ /* Print a real time performance report */
+    if (nFrames % N == 0) {
+            int64 t1 = getTickCount();
+            cout << "Frames captured: " 
+                 << cv::format("%5lld", (long long int)nFrames)
+                 << "    Average FPS: " << cv::format("%9.1f",
+                    (double)getTickFrequency() * N / (t1 - t0))
+                 << "    Average time per frame: " << cv::format("%9.2f ms",
+                    (double)(t1 - t0) * 1000.0f / (N * getTickFrequency()))
+                 << "    Average processing time: " << cv::format("%9.2f ms",
+                    (double)(processingTime)*1000.0f / (N * getTickFrequency()))
+                 << endl;
+            t0 = t1;
+            processingTime = 0;
+    }
+}
+
 int main(int, char**)
 {
     Mat frame;
@@ -84,11 +108,8 @@ int main(int, char**)
          << endl;
     cout << endl << "Start grabbing..." << endl;
 
-    size_t nFrames = 0;
     bool enableProcessing = false;
-    const int N = 50; // Print a report every N frames.
-    int64 t0 = cv::getTickCount();
-    int64 processingTime = 0;
+    t0 = cv::getTickCount();
     for (;;) {
         capture >> frame; // read the next frame from camera
         if (frame.empty()) {
@@ -96,21 +117,7 @@ int main(int, char**)
             break;
         }
         nFrames++;
-        if (nFrames % N == 0) {
-            // Print a report.
-            int64 t1 = cv::getTickCount();
-            cout << "Frames captured: " 
-                 << cv::format("%5lld", (long long int)nFrames)
-                 << "    Average FPS: " << cv::format("%9.1f",
-                    (double)getTickFrequency() * N / (t1 - t0))
-                 << "    Average time per frame: " << cv::format("%9.2f ms",
-                    (double)(t1 - t0) * 1000.0f / (N * getTickFrequency()))
-                 << "    Average processing time: " << cv::format("%9.2f ms",
-                    (double)(processingTime)*1000.0f / (N * getTickFrequency()))
-                 << std::endl;
-            t0 = t1;
-            processingTime = 0;
-        }
+        print_perf_report();
         if (!enableProcessing) {
             // Display a capture frame without processing.
             imshow("Frame", frame);
