@@ -2,6 +2,7 @@
 #include <opencv2/videoio.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>  // cv::Canny()
+#include <opencv2/core/cuda.hpp>
 #include <linux/videodev2.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
@@ -175,6 +176,10 @@ int v4l2_refresh_size (int v4l2lo, v4l2_format v, const VideoCapture cap)
 
 int main(int, char**)
 {
+    // Check for CUDA.
+    if (cuda::getCudaEnabledDeviceCount() < 1) {
+        cerr << "No CUDA-enabled device detected." << endl;
+    }
     // Create a QT window
     namedWindow("Frame", WINDOW_GUI_NORMAL | WINDOW_NORMAL);
     Mat frame;
@@ -215,11 +220,14 @@ int main(int, char**)
         if (!enableProcessing) {processed = frame;}
         else {
             // Process the captured frame.
-            int64 tp0 = cv::getTickCount();
+            int64 tp0 = getTickCount();
             cv::Canny(frame, processed, 400, 1000, 5);
+            cvtColor(processed, processed, COLOR_GRAY2BGR);
+            processingTime += getTickCount() - tp0;
         }
         imshow("Frame", processed);
         // Write the frame also to the v4l2loopback device:
+        cvtColor(processed, processed, COLOR_BGR2RGB);
 	size_t written = write(v4l2lo, processed.data,
                                processed.total() * processed.elemSize());
         if (written < 0) {
