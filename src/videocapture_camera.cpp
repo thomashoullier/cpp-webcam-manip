@@ -3,6 +3,7 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>  // cv::Canny()
 #include <opencv2/core/cuda.hpp>
+#include <opencv2/cudaimgproc.hpp>
 #include <linux/videodev2.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
@@ -180,6 +181,10 @@ int main(int, char**)
     if (cuda::getCudaEnabledDeviceCount() < 1) {
         cerr << "No CUDA-enabled device detected." << endl;
     }
+    // Initialize CUDA EdgeDetector.
+    cv::Ptr<cv::cuda::CannyEdgeDetector> canny_edg =
+        cv::cuda::createCannyEdgeDetector(400.0, 1000.0, 5, false);
+
     // Create a QT window
     namedWindow("Frame", WINDOW_GUI_NORMAL | WINDOW_NORMAL);
     Mat frame;
@@ -221,7 +226,10 @@ int main(int, char**)
         else {
             // Process the captured frame.
             int64 tp0 = getTickCount();
-            cv::Canny(frame, processed, 400, 1000, 5);
+            cvtColor(frame, processed, COLOR_BGR2GRAY);
+            cuda::GpuMat dev_frame(processed); // upload to GPU (blocking).
+            canny_edg->detect(dev_frame, dev_frame);
+            processed = Mat(dev_frame); // download from GPU (blocking).
             cvtColor(processed, processed, COLOR_GRAY2BGR);
             processingTime += getTickCount() - tp0;
         }
