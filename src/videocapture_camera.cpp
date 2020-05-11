@@ -102,6 +102,8 @@ void print_report(const String& winname, const VideoCapture capture)
             std::ostringstream perf_string;
             perf_string
                  << "FOURCC: "<<decode_fourcc(capture.get(CAP_PROP_FOURCC))<<" "
+                 << "Auto exposure: "<<capture.get(CAP_PROP_AUTO_EXPOSURE)<<" "
+                 << "Exposure: " << capture.get(CAP_PROP_EXPOSURE) << " "
                  << "Target FPS: " << capture.get(CAP_PROP_FPS) << " "
                  << capture.get(CAP_PROP_FRAME_WIDTH) << " x "
                  << capture.get(CAP_PROP_FRAME_HEIGHT) << " "
@@ -174,6 +176,20 @@ int v4l2_refresh_size (int v4l2lo, v4l2_format v, const VideoCapture cap)
     }
     return v4l2lo;
 }
+
+/// Exposure management.
+// The value for CAP_PROP_AUTO_EXPOSURE depends
+// maybe on camera and backend.
+const static int auto_exposure_on = 3;
+const static int auto_exposure_off = 1;
+
+void toggle_auto_exposure (VideoCapture cap)
+{
+    cap.set(CAP_PROP_AUTO_EXPOSURE,
+            cap.get(CAP_PROP_AUTO_EXPOSURE) == auto_exposure_on ?
+            auto_exposure_off : auto_exposure_on);
+}
+
 
 int main(int, char**)
 {
@@ -258,6 +274,8 @@ int main(int, char**)
                 break;
             case 99/*c*/: //Toggle codec change.
                 toggle_codec(capture); break;
+            case 101/*e*/: //Toggle auto-exposure.
+                toggle_auto_exposure(capture); break;
             default: break;
         }
     }
