@@ -182,6 +182,26 @@ void change_gain (VideoCapture cap, int delta)
     cap.set(CAP_PROP_FPS, 1000); // Set maximum FPS.
 }
 
+/// Focus management
+const static int auto_focus_on = 1;
+const static int auto_focus_off = 0;
+
+void toggle_autofocus(VideoCapture cap)
+{ /* Toggle the autofocus */
+     cap.set(CAP_PROP_AUTOFOCUS,
+            cap.get(CAP_PROP_AUTOFOCUS) == auto_focus_on ?
+            auto_focus_off : auto_focus_on);
+}
+
+static int focus_target = 0;
+void change_focus(VideoCapture cap, int delta)
+{ /* Increment the focus value by delta 
+     Capped at zero. */
+    int new_val = focus_target + delta;
+    focus_target = (new_val < 0) ? 0 : new_val;
+    cap.set(CAP_PROP_FOCUS, focus_target);
+}
+
 /// Current report
 static int64 t0; // Starting time for next report.
 const static int N = 20; // Print a report every N frames.
@@ -200,6 +220,9 @@ void print_report(const String& winname, const VideoCapture capture)
                  << "Exposure: " << capture.get(CAP_PROP_EXPOSURE) << " "
                  << "Gain target: " << gain_target << " "
                  << "Gain: " << capture.get(CAP_PROP_GAIN) << " "
+                 << "Auto focus: " << capture.get(CAP_PROP_AUTOFOCUS) << " "
+                 << "Focus target: " << focus_target << " "
+                 << "Focus: " << capture.get(CAP_PROP_FOCUS) << " "
                  << "Target FPS: " << capture.get(CAP_PROP_FPS) << " "
                  << capture.get(CAP_PROP_FRAME_WIDTH) << " x "
                  << capture.get(CAP_PROP_FRAME_HEIGHT) << " "
@@ -240,6 +263,7 @@ int main(int, char**)
     capture_init(capture);
     exposure_target = capture.get(CAP_PROP_EXPOSURE);
     gain_target = capture.get(CAP_PROP_GAIN);
+    focus_target = capture.get(CAP_PROP_FOCUS);
     print_cap_prop(capture);
 
     /// Initialize v4l2loopback output.
@@ -311,6 +335,12 @@ int main(int, char**)
                 change_gain(capture, -30); break;
             case 115/*s*/: // Increase target gain.
                 change_gain(capture, 30); break;
+            case 117/*u*/: // Toggle autofocus
+                toggle_autofocus(capture); break;
+            case 116/*t*/: // Decrease focus (focus farther objects)
+                change_focus(capture, -5); break;
+            case 121/*y*/: // Increase focus (focus nearer objects)
+                change_focus(capture, 5); break;
             default: break;
         }
     }

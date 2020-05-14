@@ -22,9 +22,12 @@ This is developed in Void Linux.
 | `c` | Cycle between capture codecs |
 | `e` | Toggle auto-exposure |
 | `q` | Decrease exposure |
-| `w` | Increase exposre |
+| `w` | Increase exposure |
 | `a` | Decrease gain |
 | `s` | Increase gain |
+| `u` | Toggle auto-focus |
+| `t` | Decrease focus value (focus farther objects) |
+| `y` | Increase focus value (focus nearer objects) |
 
 ### Notes
 * Auto-exposure actually sets both the GAIN and the EXPOSURE automatically on
@@ -35,6 +38,8 @@ This is developed in Void Linux.
   matching value it supports.
 
 ## Caveats
+* There are colorimetric flags for cameras in OpenCV. But this is a can of
+  worms I do not want to get into.
 
 ## References
 * [OpenCV VideoIO flags] (https://docs.opencv.org/4.3.0/d4/d15/group__videoio__flags__base.html)
