@@ -89,37 +89,6 @@ void capture_init(VideoCapture capture)
     capture.set(CAP_PROP_FPS, 1000); // Set maximum FPS for current resolution.
 }
 
-/// Current report
-static int64 t0; // Starting time for next report.
-const static int N = 20; // Print a report every N frames.
-static size_t nFrames = 0; // Total number of frames acquired.
-static int64 processingTime = 0; // Time it took to process frames.
-
-void print_report(const String& winname, const VideoCapture capture)
-{ /* Print a real time performance report in overlay. */
-    if (nFrames % N == 0) {
-            int64 t1 = getTickCount();
-            std::ostringstream perf_string;
-            perf_string
-                 << "FOURCC: "<<decode_fourcc(capture.get(CAP_PROP_FOURCC))<<" "
-                 << "Auto exposure: "<<capture.get(CAP_PROP_AUTO_EXPOSURE)<<" "
-                 << "Exposure: " << capture.get(CAP_PROP_EXPOSURE) << " "
-                 << "Target FPS: " << capture.get(CAP_PROP_FPS) << " "
-                 << capture.get(CAP_PROP_FRAME_WIDTH) << " x "
-                 << capture.get(CAP_PROP_FRAME_HEIGHT) << " "
-                 << "FPS: " << cv::format("%.1f ",
-                    (double)getTickFrequency() * N / (t1 - t0))
-                 << "Per frame: " << cv::format("%.1f ms ",
-                    (double)(t1 - t0) * 1000.0f / (N * getTickFrequency()))
-                 << "Processing: " << cv::format("%.1f ms ",
-                   (double)(processingTime)*1000.0f / (N * getTickFrequency()));
-            t0 = t1;
-            processingTime = 0;
-
-            displayOverlay(winname, perf_string.str());
-    }
-}
-
 /// v4l2loopback management
 v4l2_format v4l2_init (int v4l2lo, const VideoCapture cap)
 { /* Initialize the necessary v4l2 configuration. */
@@ -190,6 +159,64 @@ void toggle_auto_exposure (VideoCapture cap)
             auto_exposure_off : auto_exposure_on);
 }
 
+static int exposure_target = 0;
+
+void change_exposure (VideoCapture cap, int delta)
+{ /* Increment the exposure target by delta.
+     Capped at zero. */
+    int new_val = exposure_target + delta;
+    exposure_target = (new_val < 0) ? 0 : new_val;
+    cap.set(CAP_PROP_EXPOSURE, exposure_target);
+    cap.set(CAP_PROP_FPS, 1000); // Set maximum FPS.
+}
+
+/// Gain management
+static int gain_target = 0;
+
+void change_gain (VideoCapture cap, int delta)
+{ /* Increment the gain target by delta.
+     Capped at zero */
+    int new_val = gain_target + delta;
+    gain_target = (new_val < 0) ? 0 : new_val;
+    cap.set(CAP_PROP_GAIN, gain_target);
+    cap.set(CAP_PROP_FPS, 1000); // Set maximum FPS.
+}
+
+/// Current report
+static int64 t0; // Starting time for next report.
+const static int N = 20; // Print a report every N frames.
+static size_t nFrames = 0; // Total number of frames acquired.
+static int64 processingTime = 0; // Time it took to process frames.
+
+void print_report(const String& winname, const VideoCapture capture)
+{ /* Print a real time performance report in overlay. */
+    if (nFrames % N == 0) {
+            int64 t1 = getTickCount();
+            std::ostringstream perf_string;
+            perf_string
+                 << "FOURCC: "<<decode_fourcc(capture.get(CAP_PROP_FOURCC))<<" "
+                 << "Auto exposure: "<<capture.get(CAP_PROP_AUTO_EXPOSURE)<<" "
+                 << "Target exposure: " << exposure_target << " "
+                 << "Exposure: " << capture.get(CAP_PROP_EXPOSURE) << " "
+                 << "ISO Speed: " << capture.get(CAP_PROP_ISO_SPEED) << " "
+                 << "Gain target: " << gain_target << " "
+                 << "Gain: " << capture.get(CAP_PROP_GAIN) << " "
+                 << "Iris: " << capture.get(CAP_PROP_IRIS) << " "
+                 << "Target FPS: " << capture.get(CAP_PROP_FPS) << " "
+                 << capture.get(CAP_PROP_FRAME_WIDTH) << " x "
+                 << capture.get(CAP_PROP_FRAME_HEIGHT) << " "
+                 << "FPS: " << cv::format("%.1f ",
+                    (double)getTickFrequency() * N / (t1 - t0))
+                 << "Per frame: " << cv::format("%.1f ms ",
+                    (double)(t1 - t0) * 1000.0f / (N * getTickFrequency()))
+                 << "Processing: " << cv::format("%.1f ms ",
+                   (double)(processingTime)*1000.0f / (N * getTickFrequency()));
+            t0 = t1;
+            processingTime = 0;
+
+            displayOverlay(winname, perf_string.str());
+    }
+}
 
 int main(int, char**)
 {
@@ -213,6 +240,8 @@ int main(int, char**)
         return 1;
     }
     capture_init(capture);
+    exposure_target = capture.get(CAP_PROP_EXPOSURE);
+    gain_target = capture.get(CAP_PROP_GAIN);
     print_cap_prop(capture);
 
     /// Initialize v4l2loopback output.
@@ -268,14 +297,22 @@ int main(int, char**)
                 enableProcessing = !enableProcessing;
                 cout << "Enable frame processing ('space' key): "
                      << enableProcessing << endl; break;
-            case 114/*r*/: //Toggle resolution change.
+            case 114/*r*/: //Cycle resolutions.
                 toggle_resolution(capture); 
                 v4l2lo = v4l2_refresh_size(v4l2lo, v, capture);
                 break;
-            case 99/*c*/: //Toggle codec change.
+            case 99/*c*/: //Cycle codecs.
                 toggle_codec(capture); break;
             case 101/*e*/: //Toggle auto-exposure.
                 toggle_auto_exposure(capture); break;
+            case 113/*q*/: // Decrease target exposure.
+                change_exposure(capture, -100); break;
+            case 119/*w*/: // Increase target exposure.
+                change_exposure(capture, 100); break;
+            case 97/*a*/: // Decrease target gain.
+                change_gain(capture, -30); break;
+            case 115/*s*/: // Increase target gain.
+                change_gain(capture, 30); break;
             default: break;
         }
     }
