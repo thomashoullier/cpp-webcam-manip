@@ -30,6 +30,9 @@ This is developed in Void Linux.
 * Auto-exposure actually sets both the GAIN and the EXPOSURE automatically on
   my setup.
 * On my setup, ISO\_SPEED does not correspond to anything.
+* There can be a mismatch between a command value and actual value (eg. for
+  resolution or exposure) but the webcam will just adjust to the closest
+  matching value it supports.
 
 ## Caveats
 
