@@ -14,6 +14,10 @@ No makefile, sorry.
 /usr/bin/g++ src/videocapture_camera.cpp -o build/videocapture_camera `pkg-config --cflags --libs opencv4 cblas`
 ```
 
+## Dependencies
+We use the CUDA version of the Canny edge detector, this shows how to call
+GPU-enabled processing in OpenCV.
+
 ## Usage
 The program spawns a GUI window with the video feed from the webcam and a
 bar with some information on webcam settings. Some settings can be changed
