@@ -20,6 +20,7 @@ bar with some information on webcam settings. Some settings can be changed
 using the keybindings below.
 
 ![The GUI window with processing deactivated](doc/capture.png)
+
 ![The GUI window with processing activated](doc/capture-canny.png)
 
 The included shellscript creates a virtual video stream using `video4linux`
